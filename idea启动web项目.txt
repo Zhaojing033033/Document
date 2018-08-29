@@ -1,0 +1,7 @@
+1.点击进入project structure
+2.配置project，选择jdk，和jre版本
+3.配置modules，import modules，选择项目文件夹，然后N个下一步。配置好之后，点击右侧的绿色+号，添加library，添加tomcat的运行环境
+4.配置library，查看是否又没有引入的jar包
+5.配置artifact，配置编译，点击+号，选择web application exploded 选择from modoule
+
+6.配置tomcat。配置server，配置deployment
