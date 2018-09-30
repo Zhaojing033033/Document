@@ -1,0 +1,48 @@
+安装参考http://www.cnblogs.com/zdz8207/p/Nginx-Lua-OpenResty.html
+
+1、mkdir /usr/openresty
+2、cd /usr/openresty
+3、yum  install libreadline-dev libncurses5-dev libpcre3-dev libssl-dev perl make openssl openssl-devel
+4、下载ngx_openresty-xxx.tar.gz并解压(ngx_openresty-xxx/bundle目录里存放着nginx核心和很多第三方模块，比如有我们需要的Lua和LuaJIT。)
+wget https://openresty.org/download/ngx_openresty-1.9.7.1.tar.gz
+5、解压并进入ngx_openresty-1.9.7.1
+6、cd bundle/LuaJIT-2.1-20151219/  make clean && make && make install ln -sf luajit-2.1.0-alpha /usr/local/bin/luajit
+7、 回到bundle目录，下载ngx_cache_purge模块，该模块用于清理nginx缓存
+wget https://github.com/FRiCKLE/ngx_cache_purge/archive/2.3.tar.gz  tar -xvf 2.3.tar.gz
+8、下载nginx_upstream_check_module模块，该模块用于ustream健康检查
+wget https://github.com/yaoweibin/nginx_upstream_check_module/archive/v0.3.0.tar.gz  tar -xvf v0.3.0.tar.gz
+9、回到ngx_openresty-1.9.7.1目录(安装./configure时，在命令末尾加上 |tee /temp/nginx.out来保存安装信息)
+./configure --prefix=/usr/openresty --with-http_realip_module --with-pcre --with-luajit --add-module=./bundle/ngx_cache_purge-2.3/ --add-module=./bundle/nginx_upstream_check_module-0.3.0/ -j2 
+10、make && make install
+11、启动sbin/nginx  检查conf文件配置sbin/nginx -t    重启sbin/nginx -s reload
+12、conf文件配置
+在http部分添加如下配置 
+lua_package_path "/usr/servers/lualib/?.lua;;"; #lua 模块 
+lua_package_cpath "/usr/servers/lualib/?.so;;"; #c模块 
+location部份添加
+lua_code_cache off;
+content_by_lua_file
+13、测试 curl http://本机ip:8083/uri (先关闭防火墙或开放端口vim /etc/sysconfig/iptables)
+14、如果出错去查log日志
+15、普通用户访问时会报404，查看error日志：[error] 16408#0: *17 open() favicon.ico" failed (13: Permission denied)这是因为普通用户没有相应权限导致，
+解决方法，chmod +x /home  chmod +x /home/machang  把这个用户目录加上权限
+16、文件夹的默认路径是nginx,比如nginx目录下lua文件夹下面的test.lua,则nginx.conf中content_by_lua_file lua/test.lua
+
+===========相关模块安装==========
+1、luacheck安装，参考http://blog.csdn.net/mycwq/article/details/52589415
+git clone https://github.com/mpeterv/luacheck.git   
+cd luacheck  
+./install.lua /usr  
+luacheck ./install.lua 
+2、全局变量检查，参考http://blog.csdn.net/daiyudong2020/article/details/70226814
+将代码保存成lua-releng文件
+更改lua-releng的权限，chmod 777 lua-releng
+假设有一个源码文件为test.lua
+执行./lua-releng test.lua，则会扫描test.lua文件的全局变量，并在屏幕打印结果
+
+
+
+
+
+
+
