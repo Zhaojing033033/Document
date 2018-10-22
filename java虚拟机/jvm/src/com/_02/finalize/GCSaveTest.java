@@ -1,4 +1,4 @@
-package com._02_gc;
+package com._02.finalize;
 
 /**
  * 对象什么时候应该被回收：
