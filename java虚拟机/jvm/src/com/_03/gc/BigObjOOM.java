@@ -11,6 +11,7 @@ import sun.nio.cs.ext.JIS_X_0212_MS5022X;
  *      -Xmn10M    jvm新生代大小
  *      -XX:+PrintGCDetails   gc时打印内存日志
  *      -XX:SurvivorRatio=8   设置eden区和sur区比例
+ *      -Xloggc:../logs/gc.log 日志文件的输出路径 此例没有使用
  */
 
 public class BigObjOOM
@@ -22,9 +23,9 @@ public class BigObjOOM
     }
     public static void testAllocation() {
         byte[] allocation1,allocation2,allocation3,allocation4;
-        allocation1=new byte[_1M*2];
-        allocation2=new byte[_1M*2];
-        allocation3=new byte[_1M*3];
-        allocation4=new byte[_1M*4];
+        allocation1=new byte[_1M * 2];
+        allocation2=new byte[_1M * 2];
+        allocation3=new byte[_1M * 3];
+        allocation4=new byte[_1M * 4];
     }
 }
