@@ -1,0 +1,57 @@
+#! /bin/bash
+#url,可以通过读取获得
+file="data.data"
+url=`sed -n "1,1p" $file`
+url=`echo $url |sed 's#url=\(.*\)#\1#g'`
+echo $url
+
+echo "读取文件参数列表........"
+argsName=`sed -n "2,2p" $file`
+echo $argsName
+echo "读取文件总行数........."
+lineNo=`cat $file | wc -l`
+
+echo "读取每行数据........"
+argsParamArr=''
+for ((i=3;i<=$lineNo;i++))
+do
+        line=`sed -n "$i"p $file`
+        argsParamArr[$i - 3]=$line
+done
+
+echo "文件读取完毕......,,,"
+echo "打印数组............"
+#for i in {0..${#argsParamArr[*]}}
+for ((i=0;i<${#argsParamArr[*]};i++))
+do
+   echo ${argsParamArr[$i]}
+done
+echo "打印完毕-------------------------"
+#组织请求参数
+echo "组织请求参数并发起请求....."
+
+
+IFS="   "
+nameArr=($argsName)
+for ((i=0;i<${#argsParamArr[*]};i++))
+do
+    paraArr=(${argsParamArr[$i]})
+    paramStr=""
+    for((j=0;j<${#nameArr[*]};j++))
+    do
+        if [ "${nameArr[$j]}" == "result" ]
+        then
+                continue
+        fi
+
+        if [ "${paraArr[$j]}" ==  "xxx" ]
+        then
+                continue
+        fi
+        paramStr=$paramStr"&"${nameArr[$j]}"="${paraArr[$j]}
+     done
+   echo "  "                                                                                                                                                                                                                                                
+   echo "第"$i"次请求参数：   " ${paramStr#*&}                                                                                                                                                                                                              
+   result=`curl $url -s -d ${paramStr#*&}`                                                                                                                                                                                                                  
+   echo "结果     "$result                                                                                                                                                                                                                                  
+done                        
