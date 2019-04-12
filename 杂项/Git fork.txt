@@ -1,0 +1,40 @@
+1、给fork出来的代码库添加上游代码库源地址(只需在fork之后执行一次即可)
+git remote add upstream git@200.7.21.102:lihaoliang/nserver.git(源项目URL)
+
+2、将源项目代码更新到本地
+git fetch upstream
+git checkout dev(注意当前分支)
+git merge upstream/dev
+--------或
+git remote update upstream
+git checkout dev
+git rebase upstream/dev
+
+3、提交代码
+git add .
+git commit -m "注释XXXX"
+git push origin dev
+
+4、切换分支出错
+git checkout dev
+报错:
+error: pathspec 'mc_dev' did not match any file(s) known to git.
+解决方法:
+在本地新建同名分支
+git checkout -b dev
+操作会报错，可忽略
+git branch -u origin/dev dev
+**********************************************
+1、删除远程分支
+git push origin :<branchName>
+
+2、如果上游分支和本地分支代码不同步，可强制提交
+git push origin dev -f 
+
+3、将远程分支代码强制覆盖当前分支代码
+git reset --hard upstream/dev
+git reset --hard 4edfc34bfb0df6c825373bcfe9d3e6ec7560a662
+
+4、查看执行过的历史命令
+history 可以用grep过滤
+

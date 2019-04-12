@@ -1,0 +1,5 @@
+url=http://127.0.0.1:8000/nserver/service_fq
+cburl   reqOrder        totalAmt        ybsMerCode      ybsTermId       str     sign    result
+http://123      12313123        000000000123    000234  14000017        key2k3e4y5k6e7y0        5A96441DC5B1490B5BA9F8B6BD66CAC2        xxx 
+https://123     12313124        000000000333    000234  14000017        key2k3e4y5k6e7y1        5A96441DC5B1490B5BA9F8B6BD66CAC1
+xxx             12312312        000000000111    000123  14000018        keykeykeykyekyee        xxx 
