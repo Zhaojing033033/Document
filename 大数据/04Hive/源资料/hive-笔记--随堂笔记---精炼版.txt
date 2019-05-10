@@ -1,0 +1,539 @@
+HIVE看起来就像一个大的数据库
+可以建表：
+1、表定义信息会被记录到hive的元数据库中
+2、会在HDFS上的hive库目录中创建一个跟表名一致的文件夹
+3、往表目录中放入文件，表就有了数据
+
+
+1/ DDL
+建表示例：
+create table t_test5(id int,name string)
+row format delimited
+fields terminated by ',';
+
+
+放入数据： 可以直接用hdfs客户端往表目录中put数据文件即可
+
+
+1.1 内部表和外部表（external）
+
+create table t_2(id int,name string,salary bigint,add string)
+row format delimited
+fields terminated by ',';
+
+
+create external table t_3(id int,name string,salary bigint,add string)
+row format delimited
+fields terminated by ','
+location '/aa/bb'
+;
+
+区别： 内部表的目录由hive创建在默认的仓库目录下：/user/hive/warehouse/....
+	   外部表的目录由用户建表时自己指定： location '/位置/'
+	   
+	   drop一个内部表时，表的元信息和表数据目录都会被删除；
+	   drop一个外部表时，只删除表的元信息，表的数据目录不会删除；
+	   
+意义： 通常，一个数据仓库系统，数据总有一个源头，而源头一般是别的应用系统产生的，
+其目录无定法，为了方便映射，就可以在hive中用外部表进行映射；并且，就算在hive中把
+这个表给drop掉，也不会删除数据目录，也就不会影响到别的应用系统；  
+	
+
+	
+2/ 分区关键字 PARTITIONED BY
+create table t_4(ip string,url string,staylong int)
+partitioned by (day string) -- 分区标识不能存在于表字段中
+row format delimited
+fields terminated by ',';
+
+导入数据到不同的分区目录：
+load data local inpath '/root/weblog.1' into table t_4 partition(day='2017-04-08');
+load data local inpath '/root/weblog.2' into table t_4 partition(day='2017-04-09');
+
+
+3/ 导入数据
+3.1 将hive运行所在机器的本地磁盘上的文件导入表中
+load data local inpath '/root/weblog.1' into[overwrite] table t_1;
+
+3.2 将hdfs中的文件导入表中
+load data inpath '/user.data.2' into table t_1;
+不加local关键字，则是从hdfs的路径中移动文件到表目录中； 
+
+3.3 从别的表查询数据后插入到一张新建表中
+create table t_1_jz
+as
+select id,name from t_1;
+
+3.4 从别的表查询数据后插入到一张已存在的表中
+加入已存在一张表：可以先建好：  create table t_1_hd like t_1;
+然后从t_1中查询一些数据出来插入到t_1_hd中：
+insert into table t_1_hd
+select 
+id,name,add 
+from t_1
+where add='handong';
+
+
+4/ 导出数据
+
+4.1 将数据从hive的表中导出到hdfs的目录中
+insert overwrite directory '/aa/bb'
+select * from t_1 where add='jingzhou';
+
+4.2 将数据从hive的表中导出到本地磁盘目录中
+insert overwrite local directory '/aa/bb'
+select * from t_1 where add='jingzhou';
+
+
+5/ HIVE的存储文件格式
+HIVE支持很多种文件格式： SEQUENCE FILE | TEXT FILE | PARQUET FILE | RC FILE
+
+试验：先创建一张表t_seq，指定文件格式为sequencefile
+create table t_seq(id int,name string,add string)
+stored as sequencefile;
+然后，往表t_seq中插入数据，hive就会生成sequence文件插入表目录中
+insert into table t_seq
+select * from t_1 where add='handong';
+
+
+6/ 修改表的分区
+6.1 添加分区
+alter table t_4 add partition(day='2017-04-10') partition(day='2017-04-11');
+添加完成后，可以检查t_4的分区情况：
+show partitions t_4;
++-----------------+--+
+|    partition    |
++-----------------+--+
+| day=2017-04-08  |
+| day=2017-04-09  |
+| day=2017-04-10  |
+| day=2017-04-11  |
++-----------------+--+
+然后，可以向新增的分区中导入数据：
+--可以使用load
+load data local inpath '/root/weblog.3' into table t_4 partition(day='2017-04-10');
+0: jdbc:hive2://hdp-nn-01:10000> select * from t_4 where day='2017-04-10';
++--------------+-----------------------+---------------+-------------+--+
+|    t_4.ip    |        t_4.url        | t_4.staylong  |   t_4.day   |
++--------------+-----------------------+---------------+-------------+--+
+| 10.300.33.6  | niubi.com/b/b.html    | 300           | 2017-04-10  |
+| 30.20.33.7   | niubi.com/a/c.html    | 400           | 2017-04-10  |
+| 30.80.33.6   | niubi.com/c/bb.html   | 300           | 2017-04-10  |
+| 30.60.33.8   | niubi.com/aa/bc.html  | 60            | 2017-04-10  |
+| 30.100.33.6  | niubi.com/a/b.html    | 30            | 2017-04-10  |
+| 30.100.33.9  | niubi.com/a/ab.html   | 10            | 2017-04-10  |
++--------------+-----------------------+---------------+-------------+--+
+
+--还可以使用insert
+insert into table t_4 partition(day='2017-04-11')
+select ip,url,staylong from t_4 where day='2017-04-08' and staylong>30;
+
+6.2 删除分区
+alter table t_4 drop partition(day='2017-04-11');
+
+7/ 修改表的列定义
+添加列：
+alter table t_seq add columns(address string,age int);
+全部替换：
+alter table t_seq replace columns(id int,name string,address string,age int);
+
+修改已存在的列定义：
+alter table t_seq change userid uid string;
+
+
+
+8/ 显示命令
+show tables
+show databases
+
+show partitions
+例子：   show partitions t_4;
+
+show functions
+-- 显示hive中所有的内置函数
+
+desc t_name;
+-- 显示表定义
+
+desc extended t_name;
+-- 显示表定义的详细信息
+
+desc formatted table_name;
+-- 显示表定义的详细信息，并且用比较规范的格式显示
+
+show create table table_name
+-- 显示建表语句
+
+9/ DML
+9.1  加载数据到表中
+load
+insert
+插入单条数据： insert into table t_seq values('10','xx','beijing',28);
+
+
+9.2 多重插入
+假如有一个需求：
+  从t_4中筛选出不同的数据，插入另外两张表中；
+  
+insert overwrite table t_4_st_lt_200 partition(day='1')
+select ip,url,staylong from t_4 where staylong<200;  
+
+
+insert overwrite table t_4_st_gt_200 partition(day='1')
+select ip,url,staylong from t_4 where staylong>200; 
+
+但是以上实现方式有一个弊端，两次筛选job，要分别启动两次mr过程，要对同一份源表数据进行两次读取
+如果使用多重插入语法，则可以避免上述弊端，提高效率：源表只要读取一次即可
+
+from t_4
+insert overwrite table t_4_st_lt_200 partition(day='2')
+select ip,url,staylong where staylong<200
+insert overwrite table t_4_st_gt_200 partition(day='2')
+select ip,url,staylong where staylong>200;
+
+  
+10.SELECT
+JOIN | inner join
+left join | left outer join
+right join  | right outer join
+full outer join
+
+t_a
+a,1
+b,2
+c,3
+
+t_b
+b,22
+c,33
+d,44
+
+select a.*,b.*
+from t_a a join t_b b
+on a.id=b.id;
+
+b,2,b,22
+c,3,c,33
+
+
+select a.*,b.*
+from t_a a left join t_b b
+on a.id=b.id;
+
+a,1,null,null
+b,2,b,22
+c,3,c,33
+
+select a.*,b.*
+from t_a a right join t_b b
+on a.id=b.id;
+
+
+b,2,b,22
+c,3,c,33
+null,null,d,44
+
+
+select a.*,b.*
+from t_a a full outer join t_b b
+on a.id=b.id;
+
+a,1,null,null
+b,2,b,22
+c,3,c,33
+null,null,d,44
+
+
+
+
+left semi join   可以提高exist |  in 这种查询需求的效率
+
+select a.* from t_a a left semi join t_b b on a.id=b.id; 
+本查询中，无法取到右表的数据
+
+
+老版本中，不支持非等值的join
+在新版中：1.2.0后，都支持非等值join，不过写法应该如下：
+select a.*,b.* from t_a a,t_b b where a.id>b.id;
+
+不支持的语法：  select a.*,b.* from t_a a join t_b b on a.id>b.id;
+
+
+
+11. HIVE的自定义函数功能
+案例：
+有如下原始数据：
+1,zhangsan:18:beijing|male|it,2000
+2,lisi:28:beijing|female|finance,4000
+3,wangwu:38:shanghai|male|project,20000
+原始数据由某个应用系统产生在hdfs的如下目录中： /log/data/2017-04-10/
+
+
+需要放入hive中去做数据挖掘分析
+
+可以先建一张外部表，跟原始数据所在的目录关联：
+create external table t_user_info(id int,user_info string,salary int)
+row format delimited
+fields terminated by ','
+location '/log/data/2017-04-10/';
+
+select * from t_user_info; 可得到结果如下：
++-----------------+----------------------------------+---------------------+--+
+| t_user_info.id  |      t_user_info.user_info       | t_user_info.salary  |
++-----------------+----------------------------------+---------------------+--+
+| 1               | zhangsan:18:beijing|male|it      | 2000                |
+| 2               | lisi:28:beijing|female|finance   | 4000                |
+| 3               | wangwu:38:shanghai|male|project  | 20000               |
++-----------------+----------------------------------+---------------------+--+
+上表不方便做细粒度的分析挖掘，需要将user_info字段拆解成多个字段，用hive自带的函数不方便，
+产生一个需求：自定义一个函数来实现拆解功能
+
+自定义函数的步骤：
+a、先开发一个java程序
+public class UserInfoParser extends UDF {
+
+	// zhangsan:18:beijing|male|it
+	public String evaluate(String field, int index) {
+
+		String replaceAll = field.replaceAll("\\|", ":");
+
+		String[] split = replaceAll.split(":");
+
+		return split[index-1];
+
+	}
+}
+
+b、将java程序打成jar包，上传到hive所在的机器上
+c、在hive的命令行中输入以下命令，将程序jar包添加到hive运行时的classpath中：
+hive> add jar /root/udf.jar;
+d、在hive中创建一个函数名，映射到自己开发的java类：
+hive> create temporary function uinfo_parse as 'com.doit.hive.udf.UserInfoParser'
+e、接下来就可以使用自定义的函数uinfo_parse了
+用函数拆解原来的字段，然后将结果保存到一张明细表中：
+create table t_u_info
+as
+select 
+id,
+uinf_parse(user_info,1) as uname,
+uinf_parse(user_info,2) as age,
+uinf_parse(user_info,3) as addr,
+uinf_parse(user_info,4) as sexual,
+uinf_parse(user_info,5) as hangye,
+salary
+from 
+t_user_info;
+
+
+
+
+array数据类型示例 
+
+[root@hdp03 ~]# cat array.txt 
+1       a1,b1,c1
+2       a2,b2,c2
+3       a3,b3,c3
+4       物理,化学
+5       语文,英语,数学
+6       天文
+
+
+建表：
+create table t_stu_subject(id int,subjects array<string>)
+row format delimited
+fields terminated by '\t'
+collection items terminated by ',';
+
+导入数据
+load data local inpath '/root/array.txt' into table t_stu_subjects;
+
+查询
+> select id,subjects[0] from t_stu_subject;
+
+> select id,subjects[0],subjects[1],subjects[2] from t_stu_subject;
++-----+------+-------+-------+--+
+| id  | _c1  |  _c2  |  _c3  |
++-----+------+-------+-------+--+
+| 1   | a1   | b1    | c1    |
+| 2   | a2   | b2    | c2    |
+| 3   | a3   | b3    | c3    |
+| 4   | 物理   | 化学    | NULL  |
+| 5   | 语文   | 英语    | 数学    |
+| 6   | 天文   | NULL  | NULL  |
++-----+------+-------+-------+--+
+
+
+使用explode —— 行转列
+0: jdbc:hive2://localhost:10000> select explode(subjects) from t_stu_subject;
++------+--+
+| col  |
++------+--+
+| a1   |
+| b1   |
+| c1   |
+| a2   |
+| b2   |
+| c2   |
+| a3   |
+| b3   |
+| c3   |
+| 物理   |
+| 化学   |
+| 语文   |
+| 英语   |
+| 数学   |
+| 天文   |
++------+--+
+
+explode函数应用示例2： wordcount
+
+select words.word,count(1) as counts
+from
+(select explode(split("a b c d e f a b c d e f g"," ")) as word from dual) words
+group by word
+order by counts desc;
+
+
+
+
+
+配合lateral view 列转行方便统计
+select id, tmp.* from t_stu_subject 
+lateral view explode(subjects) tmp as sub;
++-----+----------+--+
+| id  | tmp.sub  |
++-----+----------+--+
+| 1   | a1       |
+| 1   | b1       |
+| 1   | c1       |
+| 2   | a2       |
+| 2   | b2       |
+| 2   | c2       |
+| 3   | a3       |
+| 3   | b3       |
+| 3   | c3       |
+| 4   | 物理       |
+| 4   | 化学       |
+| 5   | 语文       |
+| 5   | 英语       |
+| 5   | 数学       |
+| 6   | 天文       |
++-----+----------+--+
+
+
+统计，选修了天文学的学生
+select t_lt.id,t_lt.sub from 
+(
+select id, tmp.sub as sub from t_stu_subject 
+lateral view explode(subjects) tmp as sub
+) t_lt
+where t_lt.sub='天文'
+
++----------+-----------+--+
+| t_lt.id  | t_lt.sub  |
++----------+-----------+--+
+| 6        | 天文        |
++----------+-----------+--+
+
+
+
+时间戳函数
+select current_date from dual;
+select current_timestamp from dual;
+
+select unix_timestamp() from dual;
+1491615665
+
+select unix_timestamp('2011-12-07 13:01:03') from dual;
+1323234063
+
+select unix_timestamp('20111207 13:01:03','yyyyMMdd HH:mm:ss') from dual;
+1323234063
+
+select from_unixtime(1323234063,'yyyy-MM-dd HH:mm:ss') from dual;
+
+
+
+获取日期、时间
+select year('2011-12-08 10:03:01') from dual;
+2011
+select year('2012-12-08') from dual;
+2012
+select month('2011-12-08 10:03:01') from dual;
+12
+select month('2011-08-08') from dual;
+8
+select day('2011-12-08 10:03:01') from dual;
+8
+select day('2011-12-24') from dual;
+24
+select hour('2011-12-08 10:03:01') from dual;
+10
+select minute('2011-12-08 10:03:01') from dual;
+3
+select second('2011-12-08 10:03:01') from dual;
+1
+
+日期增减
+select date_add('2012-12-08',10) from dual;
+2012-12-18
+
+date_sub (string startdate, int days) : string
+例：
+select date_sub('2012-12-08',10) from dual;
+2012-11-28
+
+
+
+json函数
+create table t_rate 
+as 
+select uid,movie,rate,year(from_unixtime(cast(ts as bigint))) as year,month(from_unixtime(cast(ts as bigint))) as month,day(from_unixtime(cast(ts as bigint))) as day,hour(from_unixtime(cast(ts as bigint))) as hour,
+minute(from_unixtime(cast(ts as bigint))) as minute,from_unixtime(cast(ts as bigint)) as ts
+from 
+(select 
+json_tuple(rateinfo,'movie','rate','timeStamp','uid') as(movie,rate,ts,uid)
+from t_json) tmp
+;
+
+
+
+分组topn
+select *,row_number() over(partition by uid order by rate desc) as rank from t_rate;
+
+select uid,movie,rate,ts
+from 
+(select uid,movie,rate,ts,row_number() over(partition by uid order by rate desc) as rank from t_rate) tmp
+where rank<=3;
+
+
+
+网页URL数据解析函数：parse_url_tuple
+select parse_url_tuple("http://www.edu360.cn/baoming/youhui?cookieid=20937219375",'HOST','PATH','QUERY','QUERY:cookieid') 
+from dual;
++----------------+------------------+-----------------------+--------------+--+
+|       c0       |        c1        |          c2           |      c3      |
++----------------+------------------+-----------------------+--------------+--+
+| www.edu360.cn  | /baoming/youhui  | cookieid=20937219375  | 20937219375  |
++----------------+------------------+-----------------------+--------------+--+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	   
+	   

@@ -1,0 +1,47 @@
+spark 1.x SQL的基本用法（两种）
+
+1.创建SparkContext
+2.创建SQLContext
+3.创建RDD
+4.创建一个类，并定义类的成员变量
+5.整理数据并关联class
+6.将RDD转换成DataFrame（导入隐式转换）
+7.将DataFrame注册成临时表
+8.书写SQL（Transformation）
+9.执行Action
+---------------------------------
+1.创建SparkContext
+2.创建SQLContext
+3.创建RDD
+4.创建StructType（schema）
+5.整理数据将数据跟Row关联
+6.通过rowRDD和schema创建DataFrame
+7.将DataFrame注册成临时表
+8.书写SQL（Transformation）
+9.执行Action
+---------------------------------
+---------------------------------
+
+
+Spark Core : RDD 
+Spark SQL : DataFrame , DataSet
+
+DataFrame是关联的schema信息的RDD
+DataSet相当于是优化过了的RDD
+
+
+for(i <- 1 to 10) {
+	println(i)
+}
+
+pritnln(1)
+println(2)
+pritnln(3)
+println(4)
+
+
+row number parition by
+
+
+
+

@@ -1,0 +1,19 @@
+101			102				103				104		
+??hdfs	namenode		datanode		secondaryNamneNode	
+hive		datanode		resourceManager	DataNode
+mysql		nodemanager		NodeManager
+			zookeeper		zookeeper		zookeeper
+			hbase			hbase			hbase	
+			
+101     ??hdfs		hive			mysql		
+
+	
+		hdfs:												yarn:													spark:				
+			
+102		namenode		datanode							nodemanager							zookeeper	hbase	master	worker		kafka
+
+103						datanode							nodemanager		resourceManager		zookeeper	hbase    		worker		kafka
+
+104						datanode		secondaryNamneNode										zookeeper	hbase			worker		kafka
+
+105 elasticsearch
