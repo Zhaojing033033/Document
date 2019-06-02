@@ -1,0 +1,41 @@
+#!/bin/sh -e
+# chkconfig: 2345 86 16
+### BEGIN TOMCAT SERVICE
+### END INIT INFO
+#将此文件改名为comcat，放到/etc/ini.d下。并且给予 执行权限，命令  chmod +x tomcat 。
+#然后注册服务  chkconfig --add tomcat 
+
+
+export JAVA_HOME=/home/chencheng/java/jdk1.8.0_181
+export JRE_HOME=$JAVA_HOME/jre
+export PATH=$PATH:$JAVA_HOME/bin
+#export CATALINA_HOME=/home/chencheng/tomcat/apache-tomcat-8.5.32
+export CATALINA_HOME=/home/chencheng/tomcat_onu_web/apache-tomcat-8.5.32
+
+case "$1" in
+start)
+        ${CATALINA_HOME}/bin/startup.sh
+        exit 0
+        ;;
+stop)
+        ${CATALINA_HOME}/bin/shutdown.sh
+        exit 0
+        ;;
+debug)
+        ${CATALINA_HOME}/bin/shutdown.sh
+        ${CATALINA_HOME}/bin/catalina.sh run
+        exit 0
+        ;;
+force-reload|restart)
+        ${CATALINA_HOME}/bin/startup.sh
+        ${CATALINA_HOME}/bin/shutdown.sh
+        exit 0
+        ;;
+
+*)
+        echo "Usage: /etc/init.d/tomcat {start|stop|restart|force-reload|debug}"
+        exit 1
+        ;;
+esac
+
+exit 0
